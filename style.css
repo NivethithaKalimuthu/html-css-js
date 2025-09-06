@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Guess the Number</title>
+</head>
+<body>
+  <h1>Guess the number</h1>
+  <input id="gussnumber">
+  <button onclick="check()">Check</button>
+  <p id="result">You are wrong / right</p>
+  <p id="score">Score: 10</p>
+
+  <script>
+    var gussnumber = document.getElementById("gussnumber");
+    var result = document.getElementById("result");
+    var score = document.getElementById("score");
+
+    var randomnumber = Math.floor(Math.random() * 10) + 1;
+    var totalscore = 10;
+
+    function check() {
+      var enterednumber = Number(gussnumber.value);
+
+      if (randomnumber === enterednumber) {
+        result.textContent = "Right ✅";
+        alert("YOU WON!");
+      } else {
+        totalscore = totalscore - 1;
+        score.textContent = "Score: " + totalscore;
+        result.textContent = "Wrong ❌";
+      }
+    }
+  </script>
+</body>
+</html>
