@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Todo List</title>
+  <style>
+    :root{
+      --bg: #0f172a;
+      --card: #0b1220;
+      --accent: #7c3aed;
+      --muted: #94a3b8;
+      --glass: rgba(255,255,255,0.03);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;min-height:100vh;
+      font-family:Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+      background: linear-gradient(180deg,#071029 0%, #07122a 60%);
+      color:#e6eef8;display:flex;align-items:center;justify-content:center;padding:32px;
+    }
+    .app{
+      width:100%;max-width:760px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:14px;padding:20px;box-shadow:0 10px 30px rgba(2,6,23,0.6);
+    }
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    h1{font-size:20px;margin:0}
+    .subtitle{color:var(--muted);font-size:13px}
+
+    .input-row{display:flex;gap:8px;margin:10px 0}
+    .new-task{flex:1;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:var(--glass);color:inherit;font-size:15px}
+    .btn{padding:10px 14px;border-radius:10px;border:none;background:var(--accent);color:white;font-weight:600;cursor:pointer}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04)}
+
+    .controls{display:flex;align-items:center;justify-content:space-between;margin:10px 0}
+    .filters{display:flex;gap:8px}
+    .filter{padding:8px 10px;border-radius:8px;background:transparent;border:1px solid transparent;color:var(--muted);cursor:pointer}
+    .filter.active{background:rgba(124,58,237,0.14);color:var(--accent);border-color:rgba(124,58,237,0.25)}
+
+    ul.tasks{list-style:none;padding:0;margin:8px 0 0 0}
+    li.task{display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;margin-bottom:8px;background:linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.02)}
+    .task .check{width:20px;height:20px;border-radius:6px;border:2px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;cursor:pointer}
+    .task.completed .check{background:linear-gradient(90deg,var(--accent),#4f46e5);border:none}
+    .task .title{flex:1;font-size:15px}
+    .task.completed .title{opacity:0.6;text-decoration:line-through}
+    .task .actions{display:flex;gap:8px}
+    .icon-btn{background:transparent;border:none;color:var(--muted);cursor:pointer;padding:6px;border-radius:8px}
+    .count{color:var(--muted);font-size:13px}
+
+    .empty{padding:24px;border-radius:10px;text-align:center;color:var(--muted);background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent)}
+
+    @media (max-width:520px){.app{padding:14px}.new-task{padding:10px}.btn{padding:10px}}
+  </style>
+</head>
+<body>
+  <main class="app" role="application" aria-label="Todo List">
+    <header>
+      <div>
+        <h1>Todo List</h1>
+        <div class="subtitle">Build fast — store locally — stay focused</div>
+      </div>
+      <div class="count" id="taskCount">0 items</div>
+    </header>
+
+    <div class="input-row">
+      <input id="newTaskInput" class="new-task" type="text" placeholder="Add a new task and press Enter" aria-label="New task" />
+      <button id="addBtn" class="btn">Add</button>
+    </div>
+
+    <div class="controls">
+      <div class="filters" role="tablist" aria-label="Filter tasks">
+        <button class="filter active" data-filter="all">All</button>
+        <button class="filter" data-filter="active">Active</button>
+        <button class="filter" data-filter="completed">Completed</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="clearCompleted" class="btn ghost">Clear Completed</button>
+        <button id="clearAll" class="btn ghost">Clear All</button>
+      </div>
+    </div>
+
+    <ul class="tasks" id="taskList" aria-live="polite"></ul>
+
+    <div id="empty" class="empty" style="display:none">No tasks yet — add your first task ✨</div>
+
+  </main>
+
+  <script>
+    // Simple todo list with localStorage persistence, edit, delete, filters
+    const STORAGE_KEY = 'todo_tasks_v1';
+
+    let tasks = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    let filter = 'all';
+
+    const refs = {
+      input: document.getElementById('newTaskInput'),
+      addBtn: document.getElementById('addBtn'),
+      list: document.getElementById('taskList'),
+      count: document.getElementById('taskCount'),
+      filters: document.querySelectorAll('.filter'),
+      clearCompleted: document.getElementById('clearCompleted'),
+      clearAll: document.getElementById('clearAll'),
+      empty: document.getElementById('empty')
+    };
+
+    function save(){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    }
+
+    function uid(){return Date.now().toString(36) + Math.random().toString(36).slice(2,6)}
+
+    function addTask(title){
+      if(!title || !title.trim()) return;
+      tasks.unshift({id: uid(), title: title.trim(), completed: false, createdAt: Date.now()});
+      save(); render();
+    }
+
+    function toggleComplete(id){
+      tasks = tasks.map(t=> t.id===id ? {...t, completed: !t.completed} : t);
+      save(); render();
+    }
+
+    function deleteTask(id){
+      tasks = tasks.filter(t=>t.id!==id);
+      save(); render();
+    }
+
+    function editTask(id, newTitle){
+      tasks = tasks.map(t=> t.id===id ? {...t, title: newTitle} : t);
+      save(); render();
+    }
+
+    function clearCompleted(){
+      tasks = tasks.filter(t=>!t.completed);
+      save(); render();
+    }
+
+    function clearAll(){
+      if(!confirm('Clear all tasks?')) return;
+      tasks = [];
+      save(); render();
+    }
+
+    function setFilter(next){
+      filter = next;
+      refs.filters.forEach(f=> f.classList.toggle('active', f.dataset.filter===filter));
+      render();
+    }
+
+    function filteredTasks(){
+      if(filter==='active') return tasks.filter(t=>!t.completed);
+      if(filter==='completed') return tasks.filter(t=>t.completed);
+      return tasks;
+    }
+
+    function render(){
+      const list = filteredTasks();
+      refs.list.innerHTML = '';
+
+      refs.count.textContent = `${tasks.length} item${tasks.length!==1 ? 's' : ''}`;
+
+      if(tasks.length===0){refs.empty.style.display='block'} else {refs.empty.style.display='none'}
+
+      if(list.length===0 && tasks.length>0){
+        const el = document.createElement('div'); el.className='empty'; el.textContent = 'No tasks match that filter.'; refs.list.appendChild(el); return;
+      }
+
+      list.forEach(task => {
+        const li = document.createElement('li'); li.className = 'task' + (task.completed? ' completed':''); li.setAttribute('data-id',task.id);
+
+        const check = document.createElement('button'); check.className='check'; check.setAttribute('aria-label','Toggle complete');
+        check.innerHTML = task.completed ? '✔' : '';
+        check.addEventListener('click', ()=> toggleComplete(task.id));
+
+        const title = document.createElement('div'); title.className='title'; title.textContent = task.title; title.contentEditable = false; title.setAttribute('role','textbox'); title.setAttribute('aria-label','Task title');
+
+        // double click to edit
+        title.addEventListener('dblclick', ()=> startEdit(task.id, title));
+
+        const actions = document.createElement('div'); actions.className='actions';
+        const editBtn = document.createElement('button'); editBtn.className='icon-btn'; editBtn.title='Edit'; editBtn.textContent='✎';
+        editBtn.addEventListener('click', ()=> startEdit(task.id, title));
+
+        const delBtn = document.createElement('button'); delBtn.className='icon-btn'; delBtn.title='Delete'; delBtn.textContent='🗑';
+        delBtn.addEventListener('click', ()=> { if(confirm('Delete this task?')) deleteTask(task.id) });
+
+        actions.appendChild(editBtn); actions.appendChild(delBtn);
+
+        li.appendChild(check); li.appendChild(title); li.appendChild(actions);
+        refs.list.appendChild(li);
+      });
+    }
+
+    function startEdit(id, titleEl){
+      const prev = titleEl.textContent;
+      titleEl.contentEditable = true; titleEl.focus();
+      // place caret at end
+      document.execCommand('selectAll',false,null);
+      document.getSelection().collapseToEnd();
+
+      function finish(){
+        titleEl.contentEditable=false;
+        const newTitle = titleEl.textContent.trim();
+        if(!newTitle){
+          if(confirm('Empty title — delete task?')) deleteTask(id);
+          else editTask(id, prev);
+        } else {
+          editTask(id, newTitle);
+        }
+        cleanup();
+      }
+      function cancel(){ titleEl.textContent = prev; cleanup(); }
+      function onKey(e){ if(e.key==='Enter'){ e.preventDefault(); finish(); } else if(e.key==='Escape'){ cancel(); } }
+      function cleanup(){ titleEl.removeEventListener('blur', finish); titleEl.removeEventListener('keydown', onKey); }
+
+      titleEl.addEventListener('blur', finish);
+      titleEl.addEventListener('keydown', onKey);
+    }
+
+    // wire up controls
+    refs.addBtn.addEventListener('click', ()=>{ addTask(refs.input.value); refs.input.value=''; refs.input.focus(); });
+    refs.input.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ addTask(refs.input.value); refs.input.value=''; } });
+    refs.filters.forEach(f=> f.addEventListener('click', ()=> setFilter(f.dataset.filter)));
+    refs.clearCompleted.addEventListener('click', ()=> clearCompleted());
+    refs.clearAll.addEventListener('click', ()=> clearAll());
+
+    // initial render
+    render();
+
+    // expose for debugging (optional)
+    window.__todo = {addTask, editTask, deleteTask, toggleComplete, clearCompleted, clearAll, tasks};
+  </script>
+</body>
+</html>
