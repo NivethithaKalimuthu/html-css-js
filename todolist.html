@@ -1,6 +1,24 @@
-<h1 class="ok">one</h1>
-<h1 class="ok">two</h1>
+<input id="input">
+<button onclick="add()">add</button>
+<u1 id="list-container">
+    <li>hello
+        <button onclick="deleteItem(event)">delete</button>
+    </li>
+   
+</u1>
 <script>
-    var div=document.querySelectorAll(".ok")
-    console.log(div)
+    var u1=document.getElementById("list-container")
+    var input=document.getElementById("input")
+    function add()
+    {
+        var listitem=document.createElement("li")
+        listitem.innerHTML=input.value+ "<button onclick='deleteItem(event)'>delete</button>"
+        u1.append(listitem)
+    }
+    function deleteItem(event)
+    {
+        event.target.parentElement.remove()
+    }
+
+
 </script>
